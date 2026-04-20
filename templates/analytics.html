@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Daily Analytics</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 1000px;
+      margin: 20px auto;
+    }
+    h1 {
+      margin-bottom: 10px;
+    }
+    .nav-links {
+      margin-bottom: 15px;
+    }
+    .nav-links a {
+      margin-right: 10px;
+      text-decoration: none;
+    }
+    .nav-links a:hover {
+      text-decoration: underline;
+    }
+    form {
+      margin-bottom: 16px;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      display: inline-block;
+    }
+    label {
+      margin-right: 8px;
+      font-weight: bold;
+    }
+    input[type="date"] {
+      padding: 4px 6px;
+    }
+    button {
+      padding: 6px 12px;
+      margin-left: 6px;
+      cursor: pointer;
+    }
+    .summary-box {
+      margin-bottom: 18px;
+      padding: 12px;
+      border-radius: 8px;
+      background: #f5f7fb;
+      border: 1px solid #c5cae9;
+    }
+    .summary-box h2 {
+      margin-top: 0;
+      margin-bottom: 8px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: left;
+      font-size: 0.9rem;
+    }
+    th {
+      background: #f4f4f4;
+    }
+    .no-data {
+      margin-top: 10px;
+      font-style: italic;
+      opacity: 0.8;
+    }
+    .charts-section {
+      margin-top: 24px;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      background: #fafafa;
+    }
+    .charts-section h3 {
+      margin-top: 0;
+      margin-bottom: 10px;
+    }
+    .chart-wrapper {
+      width: 100%;
+      max-width: 500px;
+      margin: 0 auto;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Daily Analytics</h1>
+
+  <div class="nav-links">
+    <a href="{{ url_for('register') }}">Register</a> |
+    <a href="{{ url_for('recognize') }}">Recognize</a> |
+    <a href="{{ url_for('logs') }}">Logs</a> |
+    <a href="{{ url_for('dashboard') }}">Dashboard</a> |
+    <a href="{{ url_for('student_status') }}">Student Status</a> |
+    <a href="{{ url_for('analytics') }}">Analytics</a> |
+    <a href="{{ url_for('admin_logout') }}">Logout</a>
+  </div>
+
+  <!-- Date filter -->
+  <form method="get" action="{{ url_for('analytics') }}">
+    <label for="date">Select date:</label>
+    <input type="date" id="date" name="date" value="{{ date_str }}">
+    <button type="submit">Show</button>
+  </form>
+
+  {% set total_movements = overall.total_movements if overall else 0 %}
+
+  {% if overall and total_movements %}
+    <div class="summary-box">
+      <h2>Summary for {{ date_str }}</h2>
+      <p><strong>Total movements:</strong> {{ overall.total_movements }}</p>
+      <p><strong>Total entries:</strong> {{ overall.entries or 0 }}</p>
+      <p><strong>Total exits:</strong> {{ overall.exits or 0 }}</p>
+      <p><strong>Unique students seen:</strong> {{ overall.unique_students or 0 }}</p>
+    </div>
+
+    {% if per_location and per_location|length > 0 %}
+      <h3>Per-location breakdown</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Location</th>
+            <th>Total movements</th>
+            <th>Entries</th>
+            <th>Exits</th>
+            <th>Unique students</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in per_location %}
+            <tr>
+              <td>{{ row.location }}</td>
+              <td>{{ row.total_movements }}</td>
+              <td>{{ row.entries or 0 }}</td>
+              <td>{{ row.exits or 0 }}</td>
+              <td>{{ row.unique_students or 0 }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <!-- Single Pie Chart: Entries per Location -->
+      <div class="charts-section">
+        <h3>Entries per Location (Pie Chart)</h3>
+        <div class="chart-wrapper">
+          <canvas id="entriesPieChart"></canvas>
+        </div>
+      </div>
+    {% else %}
+      <p class="no-data">No location-wise movements found for this date.</p>
+    {% endif %}
+  {% else %}
+    <p class="no-data">No movements recorded on {{ date_str }}.</p>
+  {% endif %}
+
+  <!-- Local Chart.js -->
+  <script src="{{ url_for('static', filename='chart.umd.min.js') }}"></script>
+  <script>
+    (function () {
+      // per_location is a list of dicts from app.py
+      const perLocation = {{ per_location|tojson }};
+      if (!perLocation || perLocation.length === 0) {
+        return;
+      }
+
+      // Build labels (location names) and data (entries count)
+      const labels = perLocation.map(row => row.location);
+      const entriesData = perLocation.map(row => row.entries || 0);
+
+      // If all entries are zero, skip drawing chart to avoid a weird empty pie
+      const totalEntries = entriesData.reduce((sum, v) => sum + v, 0);
+      if (!totalEntries) {
+        return;
+      }
+
+      const ctx = document.getElementById('entriesPieChart');
+      if (!ctx) return;
+
+      new Chart(ctx, {
+        type: 'pie',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              data: entriesData
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            title: {
+              display: true,
+              text: 'Entries per Location ({{ date_str }})'
+            },
+            legend: {
+              position: 'bottom'
+            }
+          }
+        }
+      });
+
+      // Give the canvas some height
+      ctx.parentElement.style.height = '350px';
+    })();
+  </script>
+
+</body>
+</html>

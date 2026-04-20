@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Entry / Exit Logs</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 1000px;
+      margin: 20px auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: left;
+      font-size: 0.9rem;
+    }
+    th {
+      background: #f4f4f4;
+    }
+    .nav-links {
+      margin-bottom: 15px;
+    }
+    .nav-links a {
+      margin-right: 10px;
+    }
+    .dir-entry {
+      color: #1b5e20;
+      font-weight: bold;
+    }
+    .dir-exit {
+      color: #b71c1c;
+      font-weight: bold;
+    }
+    .filter-bar {
+      margin-top: 10px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      flex-wrap: wrap;
+    }
+    .filter-bar label {
+      margin-right: 8px;
+      font-weight: bold;
+    }
+    select {
+      padding: 4px 8px;
+    }
+    .btn-export {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 4px;
+      border: 1px solid #1976d2;
+      background: #1e88e5;
+      color: white;
+      text-decoration: none;
+      font-size: 0.9rem;
+    }
+    .btn-export:hover {
+      background: #1565c0;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Entry / Exit Logs</h1>
+
+  <div class="nav-links">
+    <a href="{{ url_for('register') }}">Register</a> |
+    <a href="{{ url_for('recognize') }}">Recognize</a> |
+    <a href="{{ url_for('logs') }}">Logs</a> |
+    <a href="{{ url_for('dashboard') }}">Dashboard</a> |
+    <a href="{{ url_for('student_status') }}">Student Status</a> |
+    <a href="{{ url_for('analytics') }}">Analytics</a> |
+    <a href="{{ url_for('admin_logout') }}">Logout</a>
+  </div>
+
+  <div class="filter-bar">
+    <form method="get" action="{{ url_for('logs') }}">
+      <label for="location">Location:</label>
+      <select id="location" name="location" onchange="this.form.submit()">
+        {% for loc in locations %}
+          <option value="{{ loc }}" {% if loc == current_location %}selected{% endif %}>
+            {{ loc }}
+          </option>
+        {% endfor %}
+      </select>
+    </form>
+
+    <span>Showing logs for: <strong>{{ current_location }}</strong></span>
+
+    <!-- Export to Excel for current location -->
+    <a
+      class="btn-export"
+      href="{{ url_for('export_logs', location=current_location) }}"
+    >
+      Export to Excel
+    </a>
+  </div>
+
+  {% if records and records|length > 0 %}
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Name</th>
+          <th>Roll No</th>
+          <th>Branch</th>
+          <th>Semester</th>
+          <th>Direction</th>
+          <th>Timestamp</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in records %}
+          <tr>
+            <td>{{ loop.index }}</td>
+            <td>{{ r.name }}</td>
+            <td>{{ r.roll_no }}</td>
+            <td>{{ r.branch }}</td>
+            <td>{{ r.semester }}</td>
+            <td>
+              {% if r.direction == 'entry' %}
+                <span class="dir-entry">ENTRY</span>
+              {% else %}
+                <span class="dir-exit">EXIT</span>
+              {% endif %}
+            </td>
+            <td>{{ r.timestamp }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>No movements recorded yet for <strong>{{ current_location }}</strong>.</p>
+  {% endif %}
+
+</body>
+</html>
