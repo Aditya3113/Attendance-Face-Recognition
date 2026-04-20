@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Register Face</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 900px;
+      margin: 20px auto;
+    }
+    .container {
+      display: flex;
+      gap: 30px;
+      flex-wrap: wrap;
+    }
+    form {
+      flex: 1;
+      min-width: 260px;
+      border: 1px solid #ccc;
+      padding: 15px;
+      border-radius: 8px;
+    }
+    .camera {
+      flex: 1;
+      min-width: 260px;
+      border: 1px solid #ccc;
+      padding: 15px;
+      border-radius: 8px;
+    }
+    label {
+      display: block;
+      margin-top: 8px;
+    }
+    input {
+      width: 100%;
+      padding: 6px;
+      margin-top: 4px;
+    }
+    button {
+      margin-top: 12px;
+      padding: 8px 16px;
+      cursor: pointer;
+    }
+    video, img {
+      width: 100%;
+      max-height: 260px;
+      border-radius: 6px;
+      border: 1px solid #ddd;
+      object-fit: cover;
+    }
+    .messages {
+      margin-bottom: 15px;
+      color: #b00020;
+    }
+    .nav-links {
+      margin-bottom: 15px;
+    }
+    .nav-links a {
+      margin-right: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Register Face</h1>
+
+  <div class="nav-links">
+    <a href="{{ url_for('register') }}">Register</a> |
+    <a href="{{ url_for('recognize') }}">Recognize</a> |
+    <a href="{{ url_for('logs') }}">Logs</a> |
+    <a href="{{ url_for('dashboard') }}">Dashboard</a> |
+    <a href="{{ url_for('student_status') }}">Student Status</a> |
+    <a href="{{ url_for('analytics') }}">Analytics</a> |
+    <a href="{{ url_for('admin_logout') }}">Logout</a>
+  </div>
+
+  <div class="messages">
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        {% for message in messages %}
+          <div>{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+  </div>
+
+  <div class="container">
+    <!-- Form -->
+    <form method="POST" onsubmit="return checkCaptured();">
+      <h2>Student Details</h2>
+
+      <label for="name">Name</label>
+      <input id="name" name="name" required>
+
+      <label for="roll_no">Roll Number</label>
+      <input id="roll_no" name="roll_no" required>
+
+      <label for="branch">Branch</label>
+      <input id="branch" name="branch">
+
+      <label for="semester">Semester</label>
+      <input id="semester" name="semester">
+
+      <!-- Hidden input for captured image -->
+      <input type="hidden" id="captured_image" name="captured_image">
+
+      <button type="submit">Save</button>
+    </form>
+
+    <!-- Camera -->
+    <div class="camera">
+      <h2>Camera</h2>
+      <p>Allow camera access, then click "Capture Photo".</p>
+      <video id="video" autoplay playsinline></video>
+      <canvas id="canvas" style="display:none;"></canvas>
+      <button id="capture" type="button">Capture Photo</button>
+      <p>Captured preview:</p>
+      <img id="preview" alt="Captured image will appear here">
+    </div>
+  </div>
+
+  <script>
+    const video = document.getElementById("video");
+    const canvas = document.getElementById("canvas");
+    const captureButton = document.getElementById("capture");
+    const preview = document.getElementById("preview");
+    const capturedInput = document.getElementById("captured_image");
+
+    async function startCamera() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        video.srcObject = stream;
+      } catch (err) {
+        alert("Could not access camera: " + err);
+      }
+    }
+
+    startCamera();
+
+    captureButton.addEventListener("click", () => {
+      const vidWidth = video.videoWidth;
+      const vidHeight = video.videoHeight;
+      if (!vidWidth || !vidHeight) {
+        alert("Camera not ready yet. Please wait a moment.");
+        return;
+      }
+
+      const MAX_WIDTH = 480;
+      const MAX_HEIGHT = 360;
+      const ratio = Math.min(MAX_WIDTH / vidWidth, MAX_HEIGHT / vidHeight);
+
+      const newWidth = Math.round(vidWidth * ratio);
+      const newHeight = Math.round(vidHeight * ratio);
+
+      canvas.width = newWidth;
+      canvas.height = newHeight;
+
+      const context = canvas.getContext("2d");
+      context.drawImage(video, 0, 0, newWidth, newHeight);
+
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
+      capturedInput.value = dataUrl;
+      preview.src = dataUrl;
+
+      alert("Photo captured! Now you can click Save.");
+    });
+
+    function checkCaptured() {
+      if (!capturedInput.value) {
+        alert("Please capture a photo before saving.");
+        return false;
+      }
+      return true;
+    }
+  </script>
+
+</body>
+</html>

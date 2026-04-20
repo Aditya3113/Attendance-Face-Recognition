@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Live Location Dashboard</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 1100px;
+      margin: 20px auto;
+      background: #f5f7fb;
+    }
+    h1 {
+      margin-bottom: 10px;
+    }
+    .nav-links {
+      margin-bottom: 15px;
+    }
+    .nav-links a {
+      margin-right: 10px;
+      text-decoration: none;
+      color: #1e88e5;
+    }
+    .nav-links a:hover {
+      text-decoration: underline;
+    }
+    .subtitle {
+      font-size: 0.9rem;
+      opacity: 0.8;
+      margin-bottom: 15px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+    }
+    .card {
+      background: white;
+      border-radius: 10px;
+      padding: 16px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 120px;
+    }
+    .card h2 {
+      margin: 0 0 8px 0;
+      font-size: 1.1rem;
+    }
+    .count {
+      font-size: 2.2rem;
+      font-weight: bold;
+      margin: 6px 0;
+    }
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      margin-top: 4px;
+    }
+    .badge-inside {
+      background: #e1f6e8;
+      color: #1b5e20;
+      border: 1px solid #3c9a5f;
+    }
+    .badge-outside {
+      background: #fff3e0;
+      color: #e65100;
+      border: 1px solid #fb8c00;
+    }
+    .footer-text {
+      margin-top: 18px;
+      font-size: 0.8rem;
+      opacity: 0.7;
+    }
+    .small-note {
+      font-size: 0.85rem;
+      opacity: 0.8;
+      margin-top: 6px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Live Location Dashboard</h1>
+
+  <div class="nav-links">
+    <a href="{{ url_for('register') }}">Register</a> |
+    <a href="{{ url_for('recognize') }}">Recognize</a> |
+    <a href="{{ url_for('logs') }}">Logs</a> |
+    <a href="{{ url_for('dashboard') }}">Dashboard</a> |
+    <a href="{{ url_for('student_status') }}">Student Status</a> |
+    <a href="{{ url_for('analytics') }}">Analytics</a> |
+    <a href="{{ url_for('admin_logout') }}">Logout</a>
+  </div>
+
+  <div class="subtitle">
+    Counts auto-refresh every 10 seconds.
+    For <strong>College Main Door</strong> and <strong>Hostel</strong>, the count shows how many have
+    <strong>exited and not returned yet</strong>. For all other locations, the count shows how many are
+    <strong>currently inside</strong>.
+  </div>
+
+  <div class="grid">
+    {% for item in stats %}
+      <div class="card">
+        <div>
+          <h2>{{ item.location }}</h2>
+          <div class="count">{{ item.count }}</div>
+        </div>
+
+        {% if item.mode == 'inside' %}
+          <div>
+            <span class="badge badge-inside">Currently inside</span>
+            <div class="small-note">
+              Students whose last action here is <strong>ENTRY</strong>.
+            </div>
+          </div>
+        {% else %}
+          <div>
+            <span class="badge badge-outside">Currently outside</span>
+            <div class="small-note">
+              Students whose last action here is <strong>EXIT</strong>.
+            </div>
+          </div>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+
+  <div class="footer-text">
+    Tip: keep this dashboard open on a big screen near security / admin office.
+  </div>
+
+  <script>
+    // Simple auto-refresh every 10 seconds to keep counts live
+    setInterval(() => {
+      window.location.reload();
+    }, 10000);
+  </script>
+
+</body>
+</html>
