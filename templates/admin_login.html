@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Login</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 400px;
+      margin: 40px auto;
+    }
+    h1 {
+      margin-bottom: 10px;
+    }
+    form {
+      border: 1px solid #ccc;
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+    }
+    label {
+      display: block;
+      margin-top: 8px;
+    }
+    input {
+      width: 100%;
+      padding: 6px;
+      margin-top: 4px;
+    }
+    button {
+      margin-top: 12px;
+      padding: 8px 16px;
+      cursor: pointer;
+    }
+    .messages {
+      margin-bottom: 15px;
+      color: #b00020;
+    }
+    .nav-links {
+      margin-bottom: 15px;
+    }
+    .nav-links a {
+      margin-right: 10px;
+    }
+    .guest-box {
+      border: 1px dashed #aaa;
+      padding: 12px;
+      border-radius: 8px;
+    }
+    .guest-btn {
+      margin-top: 8px;
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 4px;
+      border: 1px solid #1976d2;
+      background: #1e88e5;
+      color: white;
+      text-decoration: none;
+      font-size: 0.9rem;
+    }
+    .guest-btn:hover {
+      background: #1565c0;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Welcome</h1>
+
+  <div class="nav-links">
+    <!-- Only show main navigation after login; here just info links if you want -->
+    <a href="{{ url_for('dashboard') }}">Dashboard</a>
+  </div>
+
+  <div class="messages">
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        {% for message in messages %}
+          <div>{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+  </div>
+
+  <!-- Admin login -->
+  <form method="POST">
+    <h2>Admin Login</h2>
+    <label for="username">Username</label>
+    <input id="username" name="username" required>
+
+    <label for="password">Password</label>
+    <input id="password" name="password" type="password" required>
+
+    <button type="submit">Login as Admin</button>
+  </form>
+
+  <!-- Guest access -->
+  <div class="guest-box">
+    <h3>Guest Access</h3>
+    <p>View live dashboard only (crowd distribution in all locations).</p>
+    <a class="guest-btn" href="{{ url_for('guest_login') }}">Continue as Guest</a>
+  </div>
+
+</body>
+</html>
