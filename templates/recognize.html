@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Entry / Exit Manager (Multi-Location)</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 900px;
+      margin: 20px auto;
+    }
+    .container {
+      display: flex;
+      gap: 30px;
+      flex-wrap: wrap;
+    }
+    .panel {
+      flex: 1;
+      min-width: 260px;
+      border: 1px solid #ccc;
+      padding: 15px;
+      border-radius: 8px;
+    }
+    button {
+      margin-top: 12px;
+      padding: 8px 16px;
+      cursor: pointer;
+    }
+    video {
+      width: 100%;
+      max-height: 260px;
+      border-radius: 6px;
+      border: 1px solid #ddd;
+      object-fit: cover;
+    }
+    .result {
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 6px;
+    }
+    .result.success {
+      background: #e1f6e8;
+      border: 1px solid #3c9a5f;
+    }
+    .result.error {
+      background: #fde0e0;
+      border: 1px solid #b00020;
+    }
+    .result.info {
+      background: #eef3ff;
+      border: 1px solid #5b7cff;
+    }
+    .nav-links {
+      margin-bottom: 15px;
+    }
+    .nav-links a {
+      margin-right: 10px;
+    }
+    .status-text {
+      font-size: 0.9rem;
+      opacity: 0.8;
+      margin-top: 6px;
+    }
+    .location-select {
+      margin-top: 8px;
+      margin-bottom: 8px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Entry / Exit Manager (Live, Multi-Location)</h1>
+
+  <div class="nav-links">
+    <a href="{{ url_for('register') }}">Register</a> |
+    <a href="{{ url_for('recognize') }}">Recognize</a> |
+    <a href="{{ url_for('logs') }}">Logs</a> |
+    <a href="{{ url_for('dashboard') }}">Dashboard</a> |
+    <a href="{{ url_for('student_status') }}">Student Status</a> |
+    <a href="{{ url_for('analytics') }}">Analytics</a> |
+    <a href="{{ url_for('admin_logout') }}">Logout</a>
+  </div>
+
+  <div class="container">
+    <!-- Camera panel -->
+    <div class="panel">
+      <h2>Camera</h2>
+      <p>Choose location, then stand in front of the camera. Entry/Exit is recorded automatically.</p>
+
+      <label for="location-select"><strong>Current Location:</strong></label>
+      <select id="location-select" class="location-select">
+        {% for loc in locations %}
+          <option value="{{ loc }}" {% if loc == default_location %}selected{% endif %}>
+            {{ loc }}
+          </option>
+        {% endfor %}
+      </select>
+
+      <video id="video" autoplay playsinline></video>
+      <canvas id="canvas" style="display:none;"></canvas>
+      <p class="status-text" id="status">Starting camera…</p>
+    </div>
+
+    <!-- Result panel -->
+    <div class="panel">
+      <h2>Latest Recognition</h2>
+
+      <div id="result-box" class="result info">
+        <p>Waiting for face…</p>
+      </div>
+
+      <p class="status-text" id="similarity"></p>
+
+      <button id="toggle" type="button">Pause Recognition</button>
+    </div>
+  </div>
+
+  <script>
+    const video = document.getElementById("video");
+    const canvas = document.getElementById("canvas");
+    const resultBox = document.getElementById("result-box");
+    const statusText = document.getElementById("status");
+    const similarityText = document.getElementById("similarity");
+    const toggleBtn = document.getElementById("toggle");
+    const locationSelect = document.getElementById("location-select");
+
+    let recognizing = true;
+    let processing = false;
+    let loopInterval = null;
+    let currentLocation = locationSelect.value;
+
+    locationSelect.addEventListener("change", () => {
+      currentLocation = locationSelect.value;
+      statusText.textContent = "Location set to: " + currentLocation + ". Recognition is running…";
+    });
+
+    async function startCamera() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        video.srcObject = stream;
+        statusText.textContent = "Camera started. Recognition is running at " + currentLocation + "…";
+        startRecognitionLoop();
+      } catch (err) {
+        statusText.textContent = "Could not access camera: " + err;
+      }
+    }
+
+    function startRecognitionLoop() {
+      if (loopInterval) return;
+      loopInterval = setInterval(captureAndSendFrame, 1500); // every 1.5s
+    }
+
+    function stopRecognitionLoop() {
+      if (loopInterval) {
+        clearInterval(loopInterval);
+        loopInterval = null;
+      }
+    }
+
+    toggleBtn.addEventListener("click", () => {
+      recognizing = !recognizing;
+      if (recognizing) {
+        toggleBtn.textContent = "Pause Recognition";
+        statusText.textContent = "Recognition is running at " + currentLocation + "…";
+        startRecognitionLoop();
+      } else {
+        toggleBtn.textContent = "Resume Recognition";
+        statusText.textContent = "Recognition paused.";
+        stopRecognitionLoop();
+      }
+    });
+
+    async function captureAndSendFrame() {
+      if (!recognizing || processing) return;
+
+      const vidWidth = video.videoWidth;
+      const vidHeight = video.videoHeight;
+      if (!vidWidth || !vidHeight) {
+        return; // camera not ready yet
+      }
+
+      processing = true;
+      statusText.textContent = "Analyzing frame at " + currentLocation + "…";
+
+      const MAX_WIDTH = 480;
+      const MAX_HEIGHT = 360;
+      const ratio = Math.min(MAX_WIDTH / vidWidth, MAX_HEIGHT / vidHeight);
+
+      const newWidth = Math.round(vidWidth * ratio);
+      const newHeight = Math.round(vidHeight * ratio);
+
+      canvas.width = newWidth;
+      canvas.height = newHeight;
+
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(video, 0, 0, newWidth, newHeight);
+
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
+
+      try {
+        const response = await fetch("{{ url_for('api_recognize_frame') }}", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            captured_image: dataUrl,
+            location: currentLocation
+          }),
+        });
+
+        const data = await response.json();
+
+        if (data.status === "ok") {
+          const s = data.student;
+          const direction = data.direction || "";
+          const ts = data.timestamp || "";
+          const loc = data.location || currentLocation;
+          const dirLabel = direction.toUpperCase();
+
+          resultBox.className = "result success";
+          resultBox.innerHTML = `
+            <h3>${dirLabel} recorded at ${loc}</h3>
+            <p><strong>Name:</strong> ${s.name}</p>
+            <p><strong>Roll No:</strong> ${s.roll_no}</p>
+            <p><strong>Branch:</strong> ${s.branch || ""}</p>
+            <p><strong>Semester:</strong> ${s.semester || ""}</p>
+            <p><strong>Time:</strong> ${ts}</p>
+          `;
+          similarityText.textContent = "Similarity: " + data.similarity.toFixed(2);
+        } else if (data.status === "nomatch") {
+          resultBox.className = "result info";
+          resultBox.innerHTML = `<p>${data.message}</p>`;
+          if (typeof data.similarity === "number") {
+            similarityText.textContent = "Best similarity: " + data.similarity.toFixed(2);
+          } else {
+            similarityText.textContent = "";
+          }
+        } else {
+          resultBox.className = "result error";
+          resultBox.innerHTML = `<p>${data.message || "Unknown error."}</p>`;
+          similarityText.textContent = "";
+        }
+      } catch (err) {
+        resultBox.className = "result error";
+        resultBox.innerHTML = `<p>Request failed: ${err}</p>`;
+        similarityText.textContent = "";
+      } finally {
+        processing = false;
+        if (recognizing) {
+          statusText.textContent = "Recognition is running at " + currentLocation + "…";
+        }
+      }
+    }
+
+    startCamera();
+  </script>
+
+</body>
+</html>
