@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Student Location Status</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 700px;
+      margin: 20px auto;
+    }
+    h1 {
+      margin-bottom: 10px;
+    }
+    .nav-links {
+      margin-bottom: 15px;
+    }
+    .nav-links a {
+      margin-right: 10px;
+    }
+    form {
+      border: 1px solid #ccc;
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      margin-top: 8px;
+    }
+    input {
+      width: 100%;
+      padding: 6px;
+      margin-top: 4px;
+    }
+    button {
+      margin-top: 12px;
+      padding: 8px 16px;
+      cursor: pointer;
+    }
+    .messages {
+      margin-bottom: 15px;
+      color: #b00020;
+    }
+    .card {
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 14px;
+      background: #fafafa;
+    }
+    .status-text {
+      margin-top: 8px;
+      font-weight: bold;
+    }
+    .meta {
+      margin-top: 4px;
+      font-size: 0.9rem;
+      opacity: 0.85;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Student Location Status</h1>
+
+  <div class="nav-links">
+    <a href="{{ url_for('register') }}">Register</a> |
+    <a href="{{ url_for('recognize') }}">Recognize</a> |
+    <a href="{{ url_for('logs') }}">Logs</a> |
+    <a href="{{ url_for('dashboard') }}">Dashboard</a> |
+    <a href="{{ url_for('student_status') }}">Student Status</a> |
+    <a href="{{ url_for('analytics') }}">Analytics</a> |
+    <a href="{{ url_for('admin_logout') }}">Logout</a>
+  </div>
+
+  <div class="messages">
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        {% for message in messages %}
+          <div>{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+    {% if error %}
+      <div>{{ error }}</div>
+    {% endif %}
+  </div>
+
+  <form method="POST">
+    <label for="roll_no">Enter Roll Number</label>
+    <input id="roll_no" name="roll_no" placeholder="e.g. 24035" required>
+    <button type="submit">Check Status</button>
+  </form>
+
+  {% if result %}
+    {% if not result.has_movement %}
+      <div class="card">
+        <h3>{{ result.student.name }} ({{ result.student.roll_no }})</h3>
+        <p>{{ result.status_text }}</p>
+      </div>
+    {% else %}
+      <div class="card">
+        <h3>{{ result.student.name }} ({{ result.student.roll_no }})</h3>
+        <p><strong>Branch:</strong> {{ result.student.branch }}</p>
+        <p><strong>Semester:</strong> {{ result.student.semester }}</p>
+
+        <p class="status-text">{{ result.status_text }}</p>
+
+        <p class="meta">
+          Last movement: <strong>{{ result.direction|upper }}</strong><br>
+          Location: <strong>{{ result.location }}</strong><br>
+          Timestamp: <strong>{{ result.timestamp }}</strong>
+        </p>
+      </div>
+    {% endif %}
+  {% endif %}
+
+</body>
+</html>
